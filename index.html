@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ConectaU · Prototipo interactivo</title>
+<style>
+  :root{
+    --ink:#13293A;
+    --ink-soft:#51697A;
+    --brand:#0E4B5A;
+    --brand-2:#1E7A83;
+    --accent:#D9713F;
+    --gold:#E8B44C;
+    --bg:#F5F2EC;
+    --card:#FFFFFF;
+    --line:#E4DED3;
+    --ok:#2E7D5B;
+    --radius:16px;
+    --shadow:0 10px 30px rgba(19,41,58,.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #E9F0EF 0%, rgba(233,240,239,0) 60%),
+      radial-gradient(900px 500px at 95% 110%, #F6E7DA 0%, rgba(246,231,218,0) 55%),
+      var(--bg);
+    display:flex;justify-content:center;align-items:flex-start;
+    min-height:100vh;
+  }
+  .app{
+    width:100%;max-width:480px;background:var(--bg);position:relative;
+    display:flex;flex-direction:column;min-height:100vh;
+  }
+  @media(min-width:900px){
+    .app{
+      max-width:470px;min-height:0;height:900px;max-height:94vh;margin:3vh 0;
+      border-radius:30px;overflow:hidden;box-shadow:0 28px 70px rgba(19,41,58,.22);
+      border:1px solid #DED7CB;
+    }
+    .scroll{overflow-y:auto}
+  }
+  .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(180deg,rgba(245,242,236,.98) 70%,rgba(245,242,236,.86));
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    padding:12px 18px 10px;
+  }
+  .brandrow{display:flex;align-items:center;gap:10px}
+  .mark{
+    width:34px;height:34px;border-radius:11px;flex:0 0 auto;
+    background:linear-gradient(140deg,var(--brand) 0%,var(--brand-2) 100%);
+    color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;
+    letter-spacing:.5px;box-shadow:0 6px 14px rgba(14,75,90,.28);
+  }
+  .brandname{font-weight:800;font-size:16px;letter-spacing:.2px;line-height:1.1}
+  .brandsub{font-size:10.5px;color:var(--ink-soft);letter-spacing:.4px;text-transform:uppercase}
+  .steps{display:flex;gap:6px;align-items:center;margin-top:10px}
+  .stepbar{height:4px;flex:1;border-radius:99px;background:#E1DACE;position:relative;overflow:hidden}
+  .stepbar.done::after,.stepbar.now::after{
+    content:"";position:absolute;inset:0;border-radius:99px;
+    background:linear-gradient(90deg,var(--brand-2),var(--brand));
+  }
+  .stepbar.now::after{background:linear-gradient(90deg,var(--gold),var(--accent))}
+  .steplabel{font-size:10.5px;color:var(--ink-soft);font-weight:600;letter-spacing:.3px;margin-top:6px}
+
+  /* ---------- generic ---------- */
+  .screen{display:none;padding:20px 18px 26px}
+  .screen.active{display:block;animation:fade .28s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h1{font-size:26px;line-height:1.15;margin:0 0 10px;letter-spacing:-.4px}
+  h2{font-size:19px;line-height:1.2;margin:0 0 6px;letter-spacing:-.2px}
+  h3{font-size:14px;margin:0 0 8px;letter-spacing:.2px}
+  p{margin:0 0 12px;font-size:14px;line-height:1.55;color:#31475A}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;
+    letter-spacing:1px;text-transform:uppercase;color:var(--brand-2);
+    background:#E7F0F0;border:1px solid #CFE0E0;padding:5px 9px;border-radius:99px;margin-bottom:12px;
+  }
+  .eyebrow.accent{color:#A64E24;background:#FBEADF;border-color:#F1D4C2}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 2px 8px rgba(19,41,58,.04)}
+  .muted{color:var(--ink-soft);font-size:12.5px;line-height:1.5}
+  .notice{
+    border-radius:14px;padding:12px 13px;font-size:12.5px;line-height:1.5;
+    background:#FBF3E4;border:1px solid #EEDCB8;color:#7A5216;display:flex;gap:9px
+  }
+  .notice.info{background:#EAF2F3;border-color:#CFE1E3;color:#0F5560}
+  .notice b{font-weight:800}
+  .icon{flex:0 0 auto;font-size:14px;line-height:1.3}
+  .btn{
+    appearance:none;border:0;border-radius:13px;padding:14px 18px;font-size:14.5px;font-weight:750;
+    font-family:inherit;cursor:pointer;width:100%;transition:transform .12s ease,box-shadow .2s ease,opacity .2s;
+  }
+  .btn:active{transform:scale(.985)}
+  .btn.primary{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);color:#fff;box-shadow:0 10px 22px rgba(14,75,90,.26)}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--brand);box-shadow:none}
+  .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .btnrow{display:flex;gap:10px;margin-top:14px}
+  .btnrow .btn{width:auto;flex:1}
+  .linkbtn{background:none;border:0;color:var(--brand-2);font-family:inherit;font-weight:700;font-size:13px;padding:10px 0;cursor:pointer}
+  .divider{height:1px;background:var(--line);margin:16px 0}
+
+  /* ---------- inicio ---------- */
+  .hero{padding-top:6px}
+  .heroArt{
+    position:relative;border-radius:22px;padding:20px;margin-bottom:16px;overflow:hidden;
+    background:linear-gradient(145deg,#0E4B5A 0%,#1E7A83 62%,#2C8F86 100%);
+    color:#fff;box-shadow:0 18px 40px rgba(14,75,90,.28)
+  }
+  .heroArt::after{
+    content:"";position:absolute;width:220px;height:220px;border-radius:50%;
+    right:-70px;top:-90px;background:radial-gradient(circle,rgba(232,180,76,.55),rgba(232,180,76,0) 65%)
+  }
+  .heroArt .kicker{font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;opacity:.85;font-weight:700}
+  .heroArt h1{color:#fff;margin:8px 0 8px;font-size:25px}
+  .heroArt p{color:rgba(255,255,255,.9);font-size:13.5px;margin:0}
+  .net{position:relative;height:60px;margin-top:14px}
+  .net span{
+    position:absolute;width:26px;height:26px;border-radius:50%;
+    background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.5);
+    display:grid;place-items:center;font-size:10px;font-weight:800;color:#fff
+  }
+  .net svg{position:absolute;inset:0;width:100%;height:100%}
+  .netline{stroke:rgba(255,255,255,.35);stroke-width:1.2;fill:none}
+  .pilllist{display:flex;flex-wrap:wrap;gap:7px;margin:2px 0 4px}
+  .pill{font-size:11.5px;font-weight:650;padding:6px 10px;border-radius:99px;background:#EFF4F4;color:#0F5560;border:1px solid #D8E5E5}
+
+  /* ---------- perfiles ---------- */
+  .youcard{
+    display:flex;gap:11px;align-items:center;background:#fff;border:1.5px dashed #C9DEDC;
+    border-radius:14px;padding:11px 12px;margin-bottom:14px
+  }
+  .avatar{
+    width:44px;height:44px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;
+    color:#fff;font-weight:800;font-size:14.5px;letter-spacing:.3px
+  }
+  .avatar.sm{width:34px;height:34px;border-radius:11px;font-size:12px}
+  .pgrid{display:grid;gap:12px}
+  .profile{
+    background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:14px;
+    cursor:pointer;position:relative;transition:border-color .18s,box-shadow .18s,transform .12s
+  }
+  .profile:active{transform:scale(.995)}
+  .profile.sel{border-color:var(--brand-2);box-shadow:0 0 0 3px rgba(30,122,131,.13);background:#FBFDFD}
+  .phead{display:flex;gap:11px;align-items:center;margin-bottom:10px}
+  .pname{font-weight:800;font-size:15px;line-height:1.2}
+  .pmeta{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+  .check{
+    position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;
+    border:1.5px solid #D5CEC2;background:#fff;display:grid;place-items:center;
+    font-size:12px;color:transparent;font-weight:900;transition:.18s
+  }
+  .profile.sel .check{background:var(--brand-2);border-color:var(--brand-2);color:#fff}
+  .pblock{margin-top:9px}
+  .plabel{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8A9AA6;font-weight:800;margin-bottom:5px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:11.5px;font-weight:650;padding:5px 9px;border-radius:8px;background:#F1EFE9;color:#3B5364}
+  .chip.f{background:#EEF4F1;color:#22604B;border:1px solid #D7E7E0}
+  .chip.h{background:#FBF0E8;color:#94501F;border:1px solid #F2DCCB}
+  .avail{display:flex;gap:7px;align-items:flex-start;font-size:12.5px;color:#31475A;margin-top:10px;
+    background:#F7F5F0;border-radius:10px;padding:8px 10px;line-height:1.45}
+  .avail b{font-weight:800}
+  .toast{
+    position:fixed;left:50%;bottom:96px;transform:translate(-50%,14px);
+    background:#13293A;color:#fff;font-size:12.5px;font-weight:650;padding:10px 16px;border-radius:99px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:60;box-shadow:0 10px 24px rgba(0,0,0,.28)
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  /* ---------- bottom bar ---------- */
+  .bottombar{
+    position:sticky;bottom:0;z-index:30;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+    display:flex;align-items:center;gap:12px
+  }
+  .count{font-size:12px;color:var(--ink-soft);line-height:1.3;flex:0 0 auto}
+  .count b{display:block;font-size:16px;color:var(--ink);font-weight:800}
+  .bottombar .btn{flex:1;padding:13px 16px;font-size:14px}
+
+  /* ---------- comparar ---------- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:#fff}
+  table{border-collapse:collapse;width:100%;min-width:352px;font-size:11px;table-layout:fixed}
+  th,td{padding:9px 7px;text-align:left;vertical-align:top;border-bottom:1px solid #EFEBE3;word-wrap:break-word}
+  thead th{background:#F7F5F0;font-size:9.5px;letter-spacing:.4px;text-transform:uppercase;color:#7A8B98;font-weight:800}
+  tbody th{width:64px;font-size:9px;letter-spacing:.3px;text-transform:uppercase;color:#8A9AA6;background:#FCFBF8;font-weight:800}
+  td{color:#2E4757;line-height:1.4}
+  td .mini{display:block;font-weight:650;color:var(--ink);font-size:10.5px;padding-left:6px;
+    border-left:2px solid #D6E5E5;margin-bottom:4px;line-height:1.3}
+  .you-col{background:#F6FAFA}
+  .swipe{font-size:10.5px;color:#93A1AC;text-align:right;margin:6px 2px 0}
+  .twocol{display:grid;gap:11px;margin-top:14px}
+  .panel{border-radius:14px;padding:13px;border:1px solid}
+  .panel.good{background:#EEF6F1;border-color:#D2E7DA}
+  .panel.warn{background:#FDF2E9;border-color:#F0DAC7}
+  .panel h3{font-size:12.5px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px}
+  .panel.good h3{color:#22604B}
+  .panel.warn h3{color:#96521F}
+  .panel ul{margin:0;padding-left:16px}
+  .panel li{font-size:12.5px;line-height:1.5;color:#33495A;margin-bottom:5px}
+
+  /* ---------- equipo ---------- */
+  .teambox{
+    border-radius:18px;padding:16px;background:linear-gradient(160deg,#0E4B5A,#1E7A83);color:#fff;
+    box-shadow:0 16px 34px rgba(14,75,90,.24);margin-bottom:16px
+  }
+  .teambox .lbl{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;opacity:.8;font-weight:800}
+  .teambox h2{color:#fff;margin:4px 0 12px;font-size:20px}
+  .members{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .m{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:9px 5px;text-align:center}
+  .m .circle{width:34px;height:34px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;
+    font-size:12px;font-weight:800;background:rgba(255,255,255,.22);border:1.5px solid rgba(255,255,255,.55)}
+  .m .nm{font-size:10.5px;font-weight:700;line-height:1.25}
+  .m.you{background:#E8B44C;border-color:#E8B44C;color:#3F2A05}
+  .m.you .circle{background:rgba(255,255,255,.5);border-color:rgba(255,255,255,.9);color:#3F2A05}
+  .synth li{font-size:13px;line-height:1.5;color:#33495A;margin-bottom:7px}
+  .synth{padding-left:16px;margin:0}
+
+  /* ---------- feedback ---------- */
+  .q{margin-bottom:16px}
+  .q .qh{font-size:13.5px;font-weight:750;line-height:1.4;margin-bottom:8px;color:var(--ink)}
+  .q .qn{color:var(--accent);font-weight:900;margin-right:4px}
+  .scale{display:flex;gap:6px}
+  .scale button{
+    flex:1;padding:11px 0;border-radius:10px;border:1.5px solid var(--line);background:#fff;
+    font-family:inherit;font-size:13px;font-weight:800;color:#51697A;cursor:pointer
+  }
+  .scale button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .scalehint{display:flex;justify-content:space-between;font-size:10.5px;color:#8A9AA6;margin-top:5px}
+  textarea{
+    width:100%;min-height:64px;border:1.5px solid var(--line);border-radius:11px;padding:11px;
+    font-family:inherit;font-size:13px;color:var(--ink);resize:vertical;background:#fff
+  }
+  textarea:focus{outline:none;border-color:var(--brand-2);box-shadow:0 0 0 3px rgba(30,122,131,.12)}
+  .thanks{border-radius:14px;padding:14px;background:#EEF6F1;border:1px solid #D2E7DA}
+  .thanks b{color:#22604B}
+  .footnote{font-size:10.5px;color:#93A1AC;text-align:center;line-height:1.5;margin-top:18px}
+  .backrow{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .backbtn{background:#fff;border:1px solid var(--line);width:34px;height:34px;border-radius:10px;
+    display:grid;place-items:center;cursor:pointer;font-size:15px;color:var(--brand);font-family:inherit}
+  .backtxt{font-size:12px;color:var(--ink-soft);font-weight:650}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brandrow">
+      <div class="mark">CU</div>
+      <div>
+        <div class="brandname">ConectaU</div>
+        <div class="brandsub">Prototipo académico · UCN</div>
+      </div>
+      <div style="margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.6px;color:#A64E24;background:#FBEADF;border:1px solid #F1D4C2;padding:5px 8px;border-radius:99px">PERFILES FICTICIOS</div>
+    </div>
+    <div class="steps" id="steps"></div>
+    <div class="steplabel" id="steplabel">Pantalla 1 de 5 · Inicio</div>
+  </div>
+
+  <div class="scroll" id="scroll">
+
+    <!-- ===== PANTALLA 1 · INICIO ===== -->
+    <section class="screen active" id="s-inicio">
+      <div class="heroArt">
+        <div class="kicker">Selecciona a tus compañeros con criterios</div>
+        <h1>Encuentra con quién trabajar y entiende por qué eliges.</h1>
+        <p>Antes de conformar un equipo, revisa intereses, fortalezas y disponibilidad general.</p>
+        <div class="net">
+          <svg viewBox="0 0 300 60" preserveAspectRatio="none">
+            <path class="netline" d="M40 30 L105 14 L170 34 L235 16" />
+            <path class="netline" d="M40 30 L105 46 L170 34 L235 44" />
+          </svg>
+          <span style="left:26px;top:16px">V</span>
+          <span style="left:92px;top:2px">A</span>
+          <span style="left:92px;top:32px">C</span>
+          <span style="left:156px;top:21px">S</span>
+          <span style="left:220px;top:4px">M</span>
+          <span style="left:220px;top:31px">F</span>
+        </div>
+      </div>
+
+      <div class="eyebrow">Pantalla 1 · Inicio</div>
+      <p><b>ConectaU</b> apoya una sola tarea de la colaboración académica virtual: <b>identificar y seleccionar compañeros</b> para una actividad grupal cuando no hay información suficiente sobre intereses, fortalezas y disponibilidad.</p>
+
+      <div class="notice">
+        <span class="icon">⚠</span>
+        <div><b>Demostración con perfiles ficticios.</b> No hay registro de estudiantes reales, no se almacenan datos personales y no se integra con las plataformas de la UCN.</div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin-bottom:9px">Qué podrás hacer aquí</h3>
+        <div class="pilllist">
+          <span class="pill">Explorar 6 perfiles de ejemplo</span>
+          <span class="pill">Comparar criterios</span>
+          <span class="pill">Elegir 3 compañeros</span>
+          <span class="pill">Ver el equipo de 4</span>
+        </div>
+        <div class="divider"></div>
+        <p class="muted" style="margin:0">Recorrido de 5 pantallas. En cada una encontrarás el botón para avanzar y volver.</p>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn primary" onclick="go(1)">Comenzar</button>
+      </div>
+      <p class="footnote">Jeimmy Constanza Prieto Acero · Yam Alexander Zuleta Sanmartín<br>Psicología — Fundación Universitaria Católica del Norte</p>
+    </section>
+
+    <!-- ===== PANTALLA 2 · EXPLORAR PERFILES ===== -->
+    <section class="screen" id="s-perfiles">
+      <div class="eyebrow">Pantalla 2 · Explorar perfiles</div>
+      <h2>Explora los perfiles disponibles</h2>
+      <p>Revisa intereses, fortalezas y disponibilidad general de cada estudiante. Selecciona <b>tres</b> personas para compararlas.</p>
+
+      <div class="youcard">
+        <div class="avatar" id="youAvatar" style="background:linear-gradient(140deg,#E8B44C,#D9713F)">TÚ</div>
+        <div style="min-width:0">
+          <div class="pname" style="font-size:14px">Tu perfil (datos de ejemplo)</div>
+          <div class="pmeta">Psicología · 4.º semestre · Psicología educativa</div>
+        </div>
+      </div>
+
+      <div class="pgrid" id="pgrid"></div>
+      <p class="muted" style="margin-top:14px">Tu perfil completa el equipo de cuatro integrantes. Los seis perfiles restantes son ficticios y sirven solo para la demostración.</p>
+    </section>
+
+    <!-- ===== PANTALLA 3 · COMPARAR ===== -->
+    <section class="screen" id="s-comparar">
+      <div class="backrow">
+        <button class="backbtn" onclick="go(1)" aria-label="Volver">←</button>
+        <span class="backtxt">Cambiar selección</span>
+      </div>
+      <div class="eyebrow">Pantalla 3 · Comparar y revisar</div>
+      <h2>Compara antes de decidir</h2>
+      <p>Los criterios están lado a lado para que la elección sea explícita.</p>
+
+      <div class="tablewrap">
+        <table id="cmpTable"></table>
+      </div>
+      <div class="swipe">→ desliza la tabla para ver a todo el equipo</div>
+
+      <div class="twocol">
+        <div class="panel good">
+          <h3>Coincidencias</h3>
+          <ul id="coincidencias"></ul>
+        </div>
+        <div class="panel warn">
+          <h3>Diferencias a conversar</h3>
+          <ul id="diferencias"></ul>
+        </div>
+      </div>
+
+      <div class="notice info" style="margin-top:14px">
+        <span class="icon">↔</span>
+        <div>Las fortalezas pueden complementarse (por ejemplo, investigación, diseño y organización), mientras que las diferencias de disponibilidad indican la necesidad de conversar para acordar horarios.</div>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn ghost" onclick="go(1)">Volver a perfiles</button>
+        <button class="btn primary" onclick="go(3)">Conformar equipo</button>
+      </div>
+    </section>
+
+    <!-- ===== PANTALLA 4 · EQUIPO CONFORMADO ===== -->
+    <section class="screen" id="s-equipo">
+      <div class="eyebrow accent">Pantalla 4 · Equipo conformado</div>
+      <div class="teambox">
+        <div class="lbl">Equipo de 4 integrantes</div>
+        <h2>Tu equipo ConectaU</h2>
+        <div class="members" id="members"></div>
+      </div>
+
+      <h3>Síntesis de los criterios considerados</h3>
+      <ul class="synth" id="sintesis"></ul>
+
+      <div class="notice" style="margin-top:14px">
+        <span class="icon">ℹ</span>
+        <div><b>Escenario de demostración.</b> En un contexto real sería necesario confirmar la participación de las personas y acordar la disponibilidad antes de dar el equipo por conformado.</div>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn ghost" onclick="go(2)">Ver comparación</button>
+        <button class="btn primary" onclick="go(4)">Dar retroalimentación</button>
+      </div>
+    </section>
+
+    <!-- ===== PANTALLA 5 · RETROALIMENTACIÓN ===== -->
+    <section class="screen" id="s-feedback">
+      <div class="eyebrow">Pantalla 5 · Retroalimentación</div>
+      <h2>¿Qué te pareció el recorrido?</h2>
+      <p>Estas preguntas orientan la prueba del prototipo con estudiantes.</p>
+
+      <div class="card">
+        <div class="q">
+          <div class="qh"><span class="qn">1.</span> ¿El recorrido te resultó comprensible?</div>
+          <div class="scale" data-q="1">
+            <button onclick="rate(this,1)">1</button>
+            <button onclick="rate(this,2)">2</button>
+            <button onclick="rate(this,3)">3</button>
+            <button onclick="rate(this,4)">4</button>
+            <button onclick="rate(this,5)">5</button>
+          </div>
+          <div class="scalehint"><span>Nada claro</span><span>Muy claro</span></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="q">
+          <div class="qh"><span class="qn">2.</span> ¿Qué información te ayudó a decidir?</div>
+          <textarea placeholder="Ej.: la disponibilidad, las fortalezas complementarias…"></textarea>
+        </div>
+
+        <div class="q">
+          <div class="qh"><span class="qn">3.</span> ¿Qué datos hicieron falta?</div>
+          <textarea placeholder="Ej.: el semestre, el ritmo de trabajo, experiencias previas…"></textarea>
+        </div>
+
+        <div class="q" style="margin-bottom:0">
+          <div class="qh"><span class="qn">4.</span> ¿Qué debería mejorarse?</div>
+          <textarea placeholder="Ej.: más criterios de filtro, explicar mejor la comparación…"></textarea>
+        </div>
+      </div>
+
+      <div id="thanksBox" style="display:none;margin-top:14px">
+        <div class="thanks">
+          <p style="margin:0 0 6px"><b>Registro de la demostración.</b></p>
+          <p class="muted" style="margin:0">Este prototipo no envía ni almacena respuestas: no hay formulario conectado a una base de datos. Durante la prueba, los comentarios se recogen <b>manualmente</b>.</p>
+        </div>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn ghost" onclick="go(0)">Reiniciar</button>
+        <button class="btn primary" onclick="enviar()">Enviar respuestas</button>
+      </div>
+      <p class="footnote">Estado de evaluación: pendiente de ejecución y registro.</p>
+    </section>
+
+  </div>
+
+  <div class="bottombar" id="bottombar" style="display:none">
+    <div class="count"><b id="selCount">0 de 3</b>seleccionados</div>
+    <button class="btn primary" id="btnCompare" disabled onclick="go(2)">Comparar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">Puedes comparar máximo 3 compañeros</div>
+
+<script>
+/* ============================================================
+   CONECTA U · Prototipo de baja fidelidad pero navegable
+   Basado en el documento "Creatividad aplicada a la solución
+   de problemas" (Psicología, UCN).
+   Pantallas: 1 Inicio · 2 Explorar · 3 Comparar · 4 Equipo · 5 Retroalimentación
+   ============================================================ */
+
+const YOU = {
+  id:'tu', name:'Tú', initials:'TÚ',
+  color:'linear-gradient(140deg,#E8B44C,#D9713F)',
+  program:'Psicología · 4.º semestre',
+  intereses:['Psicología educativa','Pensamiento crítico'],
+  fortalezas:['Escritura académica','Búsqueda bibliográfica'],
+  dias:['Lun','Mié'],
+  dispTexto:'Lunes y miércoles, 8:00–10:00 p.m.'
+};
+
+const PROFILES = [
+  { id:'valentina', name:'Valentina', initials:'VR', color:'linear-gradient(140deg,#1E7A83,#0E4B5A)',
+    program:'Psicología · 3.er semestre',
+    intereses:['Psicología social','Investigación cualitativa'],
+    fortalezas:['Investigación','Redacción académica'],
+    dias:['Lun','Mié'], dispTexto:'Lunes y miércoles, 6:00–8:00 p.m.' },
+
+  { id:'andres', name:'Andrés', initials:'AM', color:'linear-gradient(140deg,#3D6E9E,#22456B)',
+    program:'Psicología · 5.º semestre',
+    intereses:['Neuropsicología','Análisis de datos'],
+    fortalezas:['Análisis de datos','Rigor metodológico'],
+    dias:['Mar','Jue'], dispTexto:'Martes y jueves, 8:00–10:00 p.m.' },
+
+  { id:'camila', name:'Camila', initials:'CO', color:'linear-gradient(140deg,#C76B8E,#8E3F60)',
+    program:'Psicología · 2.º semestre',
+    intereses:['Material educativo','Comunicación'],
+    fortalezas:['Diseño gráfico','Comunicación visual'],
+    dias:['Sáb'], dispTexto:'Sábados, 8:00 a.m.–12:00 m.' },
+
+  { id:'sebastian', name:'Sebastián', initials:'SL', color:'linear-gradient(140deg,#6E7F3C,#47562A)',
+    program:'Psicología · 6.º semestre',
+    intereses:['Psicología organizacional','Gestión de proyectos'],
+    fortalezas:['Organización','Gestión del tiempo'],
+    dias:['Lun','Mié','Vie'], dispTexto:'Lunes, miércoles y viernes, 12:00–2:00 p.m.' },
+
+  { id:'mariana', name:'Mariana', initials:'MC', color:'linear-gradient(140deg,#9A6FB0,#6B447F)',
+    program:'Psicología · 4.º semestre',
+    intereses:['Psicología clínica','Entrevistas'],
+    fortalezas:['Escucha activa','Trabajo con personas'],
+    dias:['Mié','Vie'], dispTexto:'Miércoles y viernes, 7:00–9:00 p.m.' },
+
+  { id:'felipe', name:'Felipe', initials:'FA', color:'linear-gradient(140deg,#C08A3E,#8A5C1E)',
+    program:'Psicología · 3.er semestre',
+    intereses:['Psicología educativa','TIC'],
+    fortalezas:['Herramientas digitales','Síntesis'],
+    dias:['Dom'], dispTexto:'Domingos, 4:00–7:00 p.m.' }
+];
+
+/* Selección inicial: el ejemplo de comparación que aparece en el documento
+   (fortalezas de investigación, diseño y organización). */
+let selected = ['valentina','camila','sebastian'];
+
+const LABELS = ['Pantalla 1 de 5 · Inicio','Pantalla 2 de 5 · Explorar perfiles',
+  'Pantalla 3 de 5 · Comparar y revisar','Pantalla 4 de 5 · Equipo conformado',
+  'Pantalla 5 de 5 · Retroalimentación'];
+
+const byId = id => PROFILES.find(p => p.id === id);
+
+/* ---------- navegación ---------- */
+function go(n){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const map = ['s-inicio','s-perfiles','s-comparar','s-equipo','s-feedback'];
+  document.getElementById(map[n]).classList.add('active');
+  document.getElementById('scroll').scrollTop = 0;
+  window.scrollTo({top:0});
+
+  // barra de progreso
+  const steps = document.getElementById('steps');
+  steps.innerHTML = '';
+  for (let i=0;i<5;i++){
+    const d = document.createElement('div');
+    d.className = 'stepbar ' + (i<n ? 'done' : (i===n ? 'now' : ''));
+    steps.appendChild(d);
+  }
+  document.getElementById('steplabel').textContent = LABELS[n];
+
+  // barra inferior solo en pantalla de perfiles
+  document.getElementById('bottombar').style.display = (n===1) ? 'flex' : 'none';
+
+  if (n===2) renderCompare();
+  if (n===3) renderTeam();
+}
+
+/* ---------- pantalla 2: perfiles ---------- */
+function renderProfiles(){
+  const g = document.getElementById('pgrid');
+  g.innerHTML = PROFILES.map(p => `
+    <article class="profile ${selected.includes(p.id)?'sel':''}" data-id="${p.id}"
+             onclick="toggle('${p.id}')" role="button" tabindex="0"
+             aria-pressed="${selected.includes(p.id)}"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle('${p.id}')}">
+      <div class="check">✓</div>
+      <div class="phead">
+        <div class="avatar" style="background:${p.color}">${p.initials}</div>
+        <div style="min-width:0">
+          <div class="pname">${p.name}</div>
+          <div class="pmeta">${p.program}</div>
+        </div>
+      </div>
+      <div class="pblock">
+        <div class="plabel">Intereses académicos</div>
+        <div class="chips">${p.intereses.map(i=>`<span class="chip">${i}</span>`).join('')}</div>
+      </div>
+      <div class="pblock">
+        <div class="plabel">Fortalezas</div>
+        <div class="chips">${p.fortalezas.map(f=>`<span class="chip f">${f}</span>`).join('')}</div>
+      </div>
+      <div class="avail"><span>🗓</span><div>Disponibilidad general: <b>${p.dispTexto}</b></div></div>
+    </article>`).join('');
+  updateCount();
+}
+
+function toggle(id){
+  if (selected.includes(id)){
+    selected = selected.filter(x => x !== id);
+  } else {
+    if (selected.length >= 3){ showToast(); return; }
+    selected.push(id);
+  }
+  renderProfiles();
+}
+
+let toastTimer;
+function showToast(){
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function updateCount(){
+  document.getElementById('selCount').textContent = selected.length + ' de 3';
+  const b = document.getElementById('btnCompare');
+  b.disabled = selected.length !== 3;
+  b.textContent = selected.length === 3 ? 'Comparar' : 'Elige ' + (3 - selected.length) + ' más';
+}
+
+/* ---------- pantalla 3: comparar ---------- */
+function renderCompare(){
+  const team = [YOU, ...selected.map(byId)];
+  const head = team.map(m => `<th class="${m.id==='tu'?'you-col':''}">${m.id==='tu'?'Tú':m.name}</th>`).join('');
+  const row = (label, fn) => `<tr><th>${label}</th>${team.map(fn).join('')}</tr>`;
+
+  document.getElementById('cmpTable').innerHTML = `
+    <thead><tr><th></th>${head}</tr></thead>
+    <tbody>
+      ${row('Intereses', m => `<td class="${m.id==='tu'?'you-col':''}'>${m.intereses.map(i=>`<span class="mini">${i}</span>`).join('')}</td>`)}
+      ${row('Fortalezas', m => `<td class="${m.id==='tu'?'you-col':''}">${m.fortalezas.map(f=>`<span class="mini">${f}</span>`).join('')}</td>`)}
+      ${row('Disponib.', m => `<td class="${m.id==='tu'?'you-col':''}">${m.dispTexto}</td>`)}
+      ${row('Días', m => `<td class="${m.id==='tu'?'you-col':''}">${m.dias.join(', ')}</td>`)}
+    </tbody>`;
+
+  /* coincidencias: días en que coinciden los cuatro + intereses compartidos */
+  const allDays = team.map(m => m.dias);
+  const common = allDays[0].filter(d => allDays.every(a => a.includes(d)));
+  const count = {};
+  team.forEach(m => m.intereses.forEach(i => count[i] = (count[i]||0)+1));
+  const sharedInt = Object.keys(count).filter(i => count[i] >= 2);
+
+  const coinc = [];
+  if (common.length) coinc.push(`Los cuatro tienen disponibilidad el <b>${common.join(' y ')}</b>: hay una base para proponer una reunión inicial.`);
+  else coinc.push('No hay un día en que coincidan los cuatro a la misma hora: la disponibilidad es parcial.');
+  if (sharedInt.length) coinc.push(`Intereses compartidos: <b>${sharedInt.join(', ')}</b>.`);
+  coinc.push('Las cuatro personas están en el mismo programa, lo que facilita acordar criterios de trabajo.');
+  document.getElementById('coincidencias').innerHTML = coinc.map(c=>`<li>${c}</li>`).join('');
+
+  const dif = [];
+  const fortalezas = team.map(m => m.fortalezas[0]);
+  dif.push(`Fortalezas distintas y complementarias: <b>${fortalezas.join(', ')}</b>.`);
+  dif.push(`Las franjas horarias no son iguales (${[...new Set(team.map(m=>m.dispTexto))].length} horarios diferentes): hay que acordar un momento común.`);
+  dif.push('El semestre y el ritmo de trabajo no aparecen en el prototipo: conviene preguntarlo antes de confirmar.');
+  document.getElementById('diferencias').innerHTML = dif.map(c=>`<li>${c}</li>`).join('');
+}
+
+/* ---------- pantalla 4: equipo ---------- */
+function renderTeam(){
+  const team = [YOU, ...selected.map(byId)];
+  document.getElementById('members').innerHTML = team.map(m => `
+    <div class="m ${m.id==='tu'?'you':''}">
+      <div class="circle">${m.initials}</div>
+      <div class="nm">${m.id==='tu'?'Tú':m.name}</div>
+    </div>`).join('');
+
+  const allDays = team.map(m => m.dias);
+  const common = allDays[0].filter(d => allDays.every(a => a.includes(d)));
+  const fortalezas = team.map(m => m.fortalezas[0]);
+
+  const items = [
+    `<b>Equipo de 4 integrantes:</b> tú y tres compañeros seleccionados (${selected.map(id=>byId(id).name).join(', ')}).`,
+    `<b>Fortalezas complementarias:</b> ${fortalezas.join(', ')}.`,
+    common.length
+      ? `<b>Disponibilidad:</b> coinciden el ${common.join(' y ')}, lo que permite proponer una primera reunión.`
+      : `<b>Disponibilidad:</b> no hay un día común para los cuatro; el primer acuerdo debe ser el horario.`,
+    `<b>Intereses considerados:</b> ${[...new Set(team.flatMap(m=>m.intereses))].slice(0,5).join(', ')}.`
+  ];
+  document.getElementById('sintesis').innerHTML = items.map(i=>`<li>${i}</li>`).join('');
+}
+
+/* ---------- pantalla 5: retroalimentación ---------- */
+function rate(btn, v){
+  const wrap = btn.parentElement;
+  wrap.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function enviar(){
+  const box = document.getElementById('thanksBox');
+  box.style.display = 'block';
+  box.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+/* ---------- init ---------- */
+renderProfiles();
+go(1); // arranca en Inicio según el flujo, pero deja la pantalla 2 lista
+go(0);
+
+/* soporte para capturas: index.html?screen=2 */
+const q = new URLSearchParams(location.search).get('screen');
+if (q !== null && !isNaN(parseInt(q))) go(Math.max(0, Math.min(4, parseInt(q))));
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
